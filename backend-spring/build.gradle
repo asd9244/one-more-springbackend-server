@@ -1,0 +1,69 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.board'
+version = '0.0.1-SNAPSHOT'
+description = 'backend-spring'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' } // Spring AI 마일스톤 저장소
+}
+
+ext {
+    set('springAiVersion', "1.0.0-M4") // Spring AI 버전 관리 (BOM)
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+    // NoSuchMethodError 방지를 위해 Swagger 관련 라이브러리 버전 강제 고정
+    // Spring AI가 하위 버전을 가져오는 것을 방지하기 위해 2.2.25로 명시함
+    implementation 'io.swagger.core.v3:swagger-annotations:2.2.25'
+    implementation 'io.swagger.core.v3:swagger-models:2.2.25'
+
+    implementation 'io.projectreactor:reactor-core'
+    implementation 'org.postgresql:postgresql'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'org.springframework.ai:spring-ai-ollama-spring-boot-starter' // Spring AI Ollama 스타터
+    // Java와 Kotlin에서 .env 파일을 쉽게 로드하여 환경 변수처럼 사용할 수 있게 해주는 오픈소스 라이브러리
+    implementation 'me.paulschwarz:springboot3-dotenv:5.0.1'
+
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

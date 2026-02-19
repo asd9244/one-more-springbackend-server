@@ -1,0 +1,35 @@
+
+
+
+
+
+## 이승은 공부용 깃허브 코드
+
+
+git branch : 연결된 브랜치를 볼 수 있다. (초록색이 현재 연결중인 브랜치)
+
+git stash : 현재 수정사항을 잠시 따로 저장해두기. (그래야 다른사람이 한 작업물을 받을 때, 내 작업물을 올리지 않고, 받을 수 있다)
+
+git add .: git 폴더에 내 작업내용 저장.(로컬저장이랑 달라서 따로 해줘야함)
+
+git commit -m : '내 현재 브랜치'에 커밋 (메시지 꼭 달아줘야함)
+
+git push 이름 브랜치 : 해당 이름으로 현재 브랜치에서 git 브랜치로 푸쉬.
+EX) git push origin java-server
+
+git pull origin master: 해당 이름으로 마스터브랜치에서 데이터 땡겨오겠다.
+내 브랜치의 데이터를 다른 브랜치에 넣으려면, 먼저 다른 브랜치의 데이터를 땡겨와서 내 브랜치와 맞춰서 보내야함.
+
+git push origin java-server:master : 내브랜치:푸쉬할브랜치 :  그냥 푸쉬할 브렌치만 적으면, 내 브렌치도 푸쉬할 브랜치로 인식해서 에러가 남
+EX) git push origin master : 내 브랜치는 java-server이기 때문에 master로서 master에 올리지 못해서 에러남.
+
+1. 내 브랜치 확인
+2. git add .
+3. git commit -m "메시지 입력"
+4. git push origin java-server
+5. 마스터로 브랜치 변경
+6. git pull origin master
+7. git merge java-server
+8. git push origin master
+9. git switch java-server
+10. git branch

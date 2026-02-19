@@ -1,0 +1,140 @@
+package com.board.one_more_project.service;
+
+import com.board.one_more_project.dto.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * [실제 AI 서버 통신 구현체 - RestClient 버전]
+ * 1. SimpleClientHttpRequestFactory를 사용하여 FastAPI 호환성(Content-Length) 확보.
+ * 2. RestClient의 Fluent API를 사용하여 가독성 높은 코드 구현.
+ * 3. MultipartBodyBuilder를 사용하여 다중 파일 및 리스트 데이터 처리.
+ */
+@Slf4j
+@Service
+@Profile("prod")
+public class RealAiClientService implements AiClientService {
+
+    private final RestClient restClient;
+
+    // 파이썬 응답 구조 매핑용 Wrapper
+    private record PythonResponseWrapper<T>(List<T> result) {}
+
+    public RealAiClientService(@Value("${ai-server.url}") String aiServerUrl) {
+        // 1. 엔진 설정: 최신 Spring 버전의 SimpleClientHttpRequestFactory는 기본적으로 버퍼링을 수행합니다.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);  // 5초
+        factory.setReadTimeout(120000);   // 120초 (사진 3장 분석 시간 고려)
+
+        // 2. RestClient 초기화: 빌더를 통해 엔진(factory)을 주입합니다.
+        this.restClient = RestClient.builder()
+                .baseUrl(aiServerUrl)
+                .requestFactory(factory)
+                .build();
+
+        log.info("[prod] RestClient 기반 RealAiClientService 초기화 완료. URL: {}", aiServerUrl);
+    }
+
+    // =================================================================================
+    // 1. 이미지 분석 (Multipart/form-data)
+    // =================================================================================
+
+    @Override
+    public List<IngredientAnalysisResponse> analyzeImageReceipt(List<MultipartFile> files, List<String> preferences, String userId) {
+        return sendImageRequest("/analyze-image-receipts", files, preferences, userId);
+    }
+
+    @Override
+    public List<IngredientAnalysisResponse> analyzeImageIngredients(List<MultipartFile> files, List<String> preferences, String userId) {
+        return sendImageRequest("/analyze-image-ingredients", files, preferences, userId);
+    }
+
+    private List<IngredientAnalysisResponse> sendImageRequest(String uri, List<MultipartFile> files, List<String> preferences, String userId) {
+        log.info("[prod] 이미지 분석 요청(RestClient): URI={}, Count={}, User={}", uri, files.size(), userId);
+
+        // MultipartBodyBuilder: RestClient에서 멀티파트 데이터를 구성하는 표준 도구
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        // 사진 리스트 추가 (동일한 키 "files"로 여러 번 추가)
+        if (files != null) {
+            for (MultipartFile file : files) {
+                builder.part("files", file.getResource());
+            }
+        }
+
+        // 취향 리스트 추가 (동일한 키 "preference"로 여러 번 추가)
+        if (preferences != null) {
+            for (String pref : preferences) {
+                builder.part("preference", pref);
+            }
+        }
+
+        // 유저 ID 추가
+        builder.part("userId", userId);
+
+        try {
+            PythonResponseWrapper<IngredientAnalysisResponse> response = restClient.post()
+                    .uri(uri)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(builder.build()) // 빌드된 멀티파트 데이터 주입
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PythonResponseWrapper<IngredientAnalysisResponse>>() {});
+
+            return response != null ? response.result() : Collections.emptyList();
+
+        } catch (Exception e) {
+            log.error("이미지 분석 통신 오류 (URI: {}): {}", uri, e.getMessage());
+            throw new RuntimeException("AI 서버 이미지 분석 실패");
+        }
+    }
+
+    // =================================================================================
+    // 2. 레시피 생성 (Application/json)
+    // =================================================================================
+
+    @Override
+    public List<RecipeResponse> generateRecipeInitial(RecipeGenerationRequest request) {
+        return sendRecipeRequest("/recipes-generate-initial", request);
+    }
+
+    @Override
+    public List<RecipeResponse> generateRecipeBasic(RecipeGenerationRequest request) {
+        return sendRecipeRequest("/recipes-generate-basic", request);
+    }
+
+    @Override
+    public List<RecipeResponse> generateRecipeMore(RecipeGenerationRequest request) {
+        return sendRecipeRequest("/recipes-generate-more", request);
+    }
+
+    private List<RecipeResponse> sendRecipeRequest(String uri, RecipeGenerationRequest request) {
+        log.info("[prod] 레시피 생성 요청(RestClient): URI={}, User={}", uri, request.userId());
+
+        try {
+            // RestClient는 객체(DTO)를 넘기면 자동으로 JSON으로 직렬화합니다.
+            PythonResponseWrapper<RecipeResponse> response = restClient.post()
+                    .uri(uri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PythonResponseWrapper<RecipeResponse>>() {});
+
+            return response != null ? response.result() : Collections.emptyList();
+
+        } catch (Exception e) {
+            log.error("레시피 생성 통신 오류 (URI: {}): {}", uri, e.getMessage());
+            throw new RuntimeException("AI 서버 레시피 생성 실패");
+        }
+    }
+}

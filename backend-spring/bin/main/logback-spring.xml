@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 콘솔에 찍힐 로그의 모양(패턴)을 정의합니다. -->
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} [%thread] %highlight(%-5level) %cyan(%logger{20}) - %msg%n" />
+
+    <!-- 콘솔(Console) 출력 설정 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 프로젝트 전체 로그 레벨 설정 (기본은 INFO) -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- 우리 프로젝트 코드(com.board)에 대해서는 더 자세히 보고 싶을 때 설정 -->
+    <logger name="com.board.one_more_project" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE" />
+    </logger>
+</configuration>
